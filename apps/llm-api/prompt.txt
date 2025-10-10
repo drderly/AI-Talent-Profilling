@@ -1,0 +1,145 @@
+Profile Comparison Prompt:
+
+# Employee Profile Matching Analysis
+
+## Task Overview
+You are tasked with analyzing and comparing a **top incumbent** profile with a **candidate** profile to assess their overall similarity and relevance. The goal is to determine how well the candidate's profile aligns with the top incumbent's characteristics across multiple dimensions.
+
+## Input Data Structure
+
+### Profile Data Format
+Both top incumbent and candidate contain:
+- `employee_id`: Unique identifier
+- `employee_fullname`: Full name
+- `avg_appraisal_point`: Performance rating average
+- `personal_attr_history`: JSON array of qualifications/certifications with proficiency levels and date ranges
+- `assessment_history`: JSON array of various assessments with types, criteria, and dates
+- `grievance_history`: Disciplinary or grievance records (may be null/NaN)
+
+## Analysis Criteria (Equal Weight Priority)
+
+### 1. Performance Alignment (25% Weight)
+Compare `avg_appraisal_point` values with directional scoring (higher candidate performance is generally better, but optimal range exists):
+
+**Calculate the difference:** `candidate_score - incumbent_score`
+
+**SCORING BASED ON PERFORMANCE DIFFERENCE:**
+
+**When Candidate Performs EQUAL to Incumbent (Zero Difference):**
+- **EXCELLENT MATCH (0.950-1.000):** Exactly the same score (difference = 0 to ±0.1)
+
+**When Candidate Performs HIGHER than Incumbent (Positive Difference):**
+- **OPTIMAL PERFORMANCE (1.000):** Candidate score +0.2 to +0.5 points higher (ideal improvement)
+- **VERY GOOD MATCH (0.900-0.950):** Candidate score +0.6 to +1.0 points higher
+- **GOOD MATCH (0.800-0.899):** Candidate score +1.1 to +1.5 points higher
+- **MODERATE MATCH (0.700-0.799):** Candidate score +1.6 to +2.5 points higher
+- **QUESTIONABLE MATCH (0.600-0.699):** Candidate score +2.6+ points higher (may indicate overqualification or different role expectations)
+
+**When Candidate Performs LOWER than Incumbent (Negative Difference):**
+- **ACCEPTABLE MATCH (0.750-0.849):** Candidate score 0.2 to 0.5 points lower
+- **MODERATE MATCH (0.600-0.749):** Candidate score 0.6 to 1.0 points lower
+- **POOR MATCH (0.300-0.599):** Candidate score 1.1 to 2.0 points lower
+- **VERY POOR MATCH (0.100-0.299):** Candidate score 2.1 to 3.0 points lower
+- **NO MATCH (0.000-0.099):** Candidate score 3.1+ points lower
+
+**RATIONALE:** The optimal scenario is a candidate who slightly outperforms the incumbent (+0.2 to +0.5), showing growth potential while maintaining role alignment. Equal performance is excellent, while significantly higher performance may indicate overqualification concerns.
+
+### 2. Qualifications & Certifications Similarity (25% Weight)
+Analyze `personal_attr_history` for:
+- **Same qualification names/types**
+- **Similar proficiency levels**
+- **Overlapping validity periods**
+- **Quantity and quality of certifications**
+
+**SCORING:**
+- **HIGH SIMILARITY (0.800-1.000):** Multiple shared qualifications with similar proficiency
+- **MODERATE SIMILARITY (0.500-0.799):** Some shared or related qualifications
+- **LOW SIMILARITY (0.200-0.499):** Few common qualification types
+- **NO SIMILARITY (0.000-0.199):** Completely different qualification profiles
+
+### 3. Assessment Profile Alignment (25% Weight)
+Compare `assessment_history` across:
+- **Assessment types taken** (ELC, IMC, NOL, etc.)
+- **Assessment criteria/results with level hierarchy**
+- **Assessment timeline patterns**
+- **Overall assessment breadth**
+
+**ASSESSMENT CRITERIA LEVEL HIERARCHY:**
+- **Level 1 (Highest)**: Q+ = DD
+- **Level 2 (Medium)**: Q = DSP
+- **Level 3 (Lowest)**: NQ = TD
+
+**CRITERIA LEVEL SCORING:**
+- **Same assessment type + Same criteria level**: 1.000
+- **Same assessment type + Candidate higher level**: 0.900-0.950
+- **Same assessment type + Candidate 1 level lower**: 0.700-0.800
+- **Same assessment type + Candidate 2 levels lower**: 0.400-0.600
+- **Same assessment type + No criteria comparison possible**: 0.500
+- **Different assessment types**: 0.100-0.300
+
+**OVERALL ASSESSMENT ALIGNMENT SCORING:**
+- **EXCELLENT ALIGNMENT (0.850-1.000):** Multiple shared assessment types with same/higher criteria levels
+- **GOOD ALIGNMENT (0.650-0.849):** Some shared assessment types with mostly comparable criteria levels
+- **MODERATE ALIGNMENT (0.400-0.649):** Few shared assessment types or mixed criteria performance
+- **POOR ALIGNMENT (0.100-0.399):** Few shared assessment experiences or significantly lower criteria
+- **NO ALIGNMENT (0.000-0.099):** Completely different assessment profiles
+
+### 4. Professional Integrity (25% Weight)
+Evaluate `grievance_history`:
+- **No grievances for both:** 1.000
+- **No grievances vs some grievances:** 0.600
+- **Similar grievance patterns:** 0.400-0.800 (depending on severity/frequency)
+- **Significantly different disciplinary records:** 0.100-0.300
+
+## Scoring Guidelines
+
+**FINAL SCORING FORMULA:**
+Profile Similarity = (Performance × 0.25) + (Qualifications × 0.25) + (Assessments × 0.25) + (Integrity × 0.25)
+
+## Output Requirements
+
+**IMPORTANT: Return ONLY a valid JSON object. Do not include any text before or after the JSON. Do not wrap the JSON in triple backticks or any other formatting.**
+
+Return a JSON object with exactly these 2 fields:
+
+{
+  "PROFILE_SIMILARITY": 0.XXX,
+  "PROFILE_SUMMARY": "detailed_comprehensive_comparison_explanation_with_specific_examples_from_both_profiles"
+}
+
+**MANDATORY: The PROFILE_SIMILARITY score MUST be exactly 3 decimal places (e.g., 0.723, 0.856, 0.142). Do not use 2 decimal places.**
+
+## Profile Summary Example
+
+**PROFILE_SUMMARY should include:**
+- Comprehensive comparison across all four dimensions without mentioning individual scores
+- Specific examples from both profiles (names, qualifications, assessments, etc.)
+- Clear explanation of strengths and gaps
+- Only mention the final overall similarity score
+
+**Example PROFILE_SUMMARY:**
+"With an overall similarity score of 0.847, candidate Sarah Johnson demonstrates strong alignment with top incumbent Mark Chen's profile. Performance-wise, Sarah's average appraisal rating of 4.2 compared to Mark's 3.8 shows promising improvement potential. In qualifications, both professionals share critical certifications including PMP (Project Management Professional) and Six Sigma Black Belt, though Sarah brings additional Agile Scrum Master certification that Mark lacks, while Mark has specialized SAP certification. Their assessment histories show excellent overlap with both completing ELC (Executive Leadership Competency) evaluations, where Sarah achieved Q+ criteria level matching Mark's DD level performance in strategic thinking assessments. Both have clean professional integrity records with no grievances. The main gap lies in technical certifications where Mark's 8 years of SAP expertise versus Sarah's 3 years creates some disparity, but Sarah's superior performance ratings and additional modern methodology certifications like Agile suggest strong adaptation potential. This 0.847 similarity indicates Sarah would be an excellent cultural and competency fit while bringing fresh perspectives and growth trajectory."
+
+**Input Data:**
+
+**Top Incumbent:**
+{
+  "employee_id": "744690",
+  "employee_fullname": "Puput Widha Ardhana",
+  "avg_appraisal_point": 6.0,
+  "personal_attr_history": "[\n  {\n    \"qualification_id\": \"41002814\",\n    \"qualification_name\": \"Confident\",\n    \"proficiency_level_id\": null,\n    \"proficiency_level_name\": null,\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002824\",\n    \"qualification_name\": \"Rule - Concious\",\n    \"proficiency_level_id\": \"6.0\",\n    \"proficiency_level_name\": \"6.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002822\",\n    \"qualification_name\": \"High Reasoning\",\n    \"proficiency_level_id\": \"7.0\",\n    \"proficiency_level_name\": \"7.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002825\",\n    \"qualification_name\": \"Self Disciplined\",\n    \"proficiency_level_id\": \"7.0\",\n    \"proficiency_level_name\": \"7.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002825\",\n    \"qualification_name\": \"Self Disciplined\",\n    \"proficiency_level_id\": \"7.0\",\n    \"proficiency_level_name\": \"7.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002819\",\n    \"qualification_name\": \"Unconventional\",\n    \"proficiency_level_id\": \"6.0\",\n    \"proficiency_level_name\": \"6.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002819\",\n    \"qualification_name\": \"Unconventional\",\n    \"proficiency_level_id\": \"6.0\",\n    \"proficiency_level_name\": \"6.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002823\",\n    \"qualification_name\": \"Imaginative\",\n    \"proficiency_level_id\": \"6.0\",\n    \"proficiency_level_name\": \"6.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002823\",\n    \"qualification_name\": \"Imaginative\",\n    \"proficiency_level_id\": \"6.0\",\n    \"proficiency_level_name\": \"6.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002824\",\n    \"qualification_name\": \"Rule - Concious\",\n    \"proficiency_level_id\": \"6.0\",\n    \"proficiency_level_name\": \"6.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002824\",\n    \"qualification_name\": \"Rule - Concious\",\n    \"proficiency_level_id\": null,\n    \"proficiency_level_name\": null,\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002814\",\n    \"qualification_name\": \"Confident\",\n    \"proficiency_level_id\": \"3.0\",\n    \"proficiency_level_name\": \"3\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002814\",\n    \"qualification_name\": \"Confident\",\n    \"proficiency_level_id\": \"3.0\",\n    \"proficiency_level_name\": \"3\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002822\",\n    \"qualification_name\": \"High Reasoning\",\n    \"proficiency_level_id\": null,\n    \"proficiency_level_name\": null,\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002825\",\n    \"qualification_name\": \"Self Disciplined\",\n    \"proficiency_level_id\": null,\n    \"proficiency_level_name\": null,\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002819\",\n    \"qualification_name\": \"Unconventional\",\n    \"proficiency_level_id\": null,\n    \"proficiency_level_name\": null,\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002823\",\n    \"qualification_name\": \"Imaginative\",\n    \"proficiency_level_id\": null,\n    \"proficiency_level_name\": null,\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002822\",\n    \"qualification_name\": \"High Reasoning\",\n    \"proficiency_level_id\": \"7.0\",\n    \"proficiency_level_name\": \"7.0\",\n    \"start_date\": \"2021-10-01\",\n    \"end_date\": \"2025-08-26\"\n  },\n  {\n    \"qualification_id\": \"41002836\",\n    \"qualification_name\": \"CISI Result\",\n    \"proficiency_level_id\": \"22.0\",\n    \"proficiency_level_name\": \"22\",\n    \"start_date\": \"2021-05-01\",\n    \"end_date\": \"2025-08-26\"\n  }\n]",
+  "assessment_history": "[\n  {\n    \"assessment_type_code\": \"ELC\",\n    \"assessment_type_text\": \"Kompetensi ELC\",\n    \"criteria\": \"Q+\",\n    \"assessment_date\": \"2024-12-02\"\n  },\n  {\n    \"assessment_type_code\": \"PTB\",\n    \"assessment_type_text\": \"Personality Traits\",\n    \"criteria\": null,\n    \"assessment_date\": \"2021-10-14\"\n  },\n  {\n    \"assessment_type_code\": \"IMC\",\n    \"assessment_type_text\": \"IM CISI\",\n    \"criteria\": null,\n    \"assessment_date\": \"2021-05-22\"\n  },\n  {\n    \"assessment_type_code\": \"SBD\",\n    \"assessment_type_text\": \"SLAS BUMN DOMESTIC\",\n    \"criteria\": \"DD\",\n    \"assessment_date\": \"2020-08-31\"\n  },\n  {\n    \"assessment_type_code\": \"OL\",\n    \"assessment_type_text\": \"OLAS\",\n    \"criteria\": null,\n    \"assessment_date\": \"2017-10-17\"\n  },\n  {\n    \"assessment_type_code\": \"OT\",\n    \"assessment_type_text\": \"OTHERS\",\n    \"criteria\": null,\n    \"assessment_date\": \"2011-09-29\"\n  }\n]",
+  "grievance_history": null
+}
+
+**Candidate:**
+{
+  "employee_id": "746752",
+  "employee_fullname": "Alfa Niasari Utami",
+  "avg_appraisal_point": null,
+  "personal_attr_history": "[\n  {\n    \"qualification_id\": \"41002836\",\n    \"qualification_name\": \"CISI Result\",\n    \"proficiency_level_id\": \"19.0\",\n    \"proficiency_level_name\": \"19\",\n    \"start_date\": \"2022-10-01\",\n    \"end_date\": \"2025-08-26\"\n  }\n]",
+  "assessment_history": "[\n  {\n    \"assessment_type_code\": \"SLC\",\n    \"assessment_type_text\": \"Kompetensi SLC\",\n    \"criteria\": \"NQ\",\n    \"assessment_date\": \"2024-09-19\"\n  },\n  {\n    \"assessment_type_code\": \"PLC\",\n    \"assessment_type_text\": \"Kompetensi PLC\",\n    \"criteria\": \"Q\",\n    \"assessment_date\": \"2022-10-25\"\n  },\n  {\n    \"assessment_type_code\": \"IMC\",\n    \"assessment_type_text\": \"IM CISI\",\n    \"criteria\": null,\n    \"assessment_date\": \"2022-10-14\"\n  },\n  {\n    \"assessment_type_code\": \"NOL\",\n    \"assessment_type_text\": \"NEW OLAS\",\n    \"criteria\": \"DSP\",\n    \"assessment_date\": \"2019-07-31\"\n  }\n]",
+  "grievance_history": null
+}
+
+Please analyze and provide the matching results as a raw JSON object only. Do not include any text or formatting outside of the JSON structure.

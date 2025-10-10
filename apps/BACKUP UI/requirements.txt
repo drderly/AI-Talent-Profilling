@@ -1,0 +1,18 @@
+# Reflex - Full-stack Python web framework
+reflex>=0.5.0
+
+# HTTP client for API integration
+httpx>=0.25.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# Authentication (optional add-ons)
+# reflex-clerk  # For Clerk authentication
+# reflex-google-auth  # For Google authentication
+
+# Additional utilities
+pydantic>=2.0.0
