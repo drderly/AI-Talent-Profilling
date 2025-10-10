@@ -1,4 +1,10 @@
 from fastapi import FastAPI
+from fastapi.openapi.docs import (
+    get_redoc_html,
+    get_swagger_ui_html,
+    get_swagger_ui_oauth2_redirect_html,
+)
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import List, Literal, AsyncGenerator, Optional
@@ -34,7 +40,51 @@ app = FastAPI(
     license_info={
         "name": "MIT",
     },
+    # Disable built-in docs and redoc; we provide custom routes below
+    docs_url=None,
+    redoc_url=None,
+    swagger_ui_parameters={"persistAuthorization": True},
 )
+
+# ---------- Static assets (local, no CDN) ----------
+try:
+    # Serve local static assets from apps/llm-api/static
+    local_static_dir = os.path.join(os.path.dirname(__file__), "static")
+
+    # Mount them under /static to match your example
+    app.mount("/static", StaticFiles(directory=local_static_dir), name="static")
+
+    # Paths
+    _DOCS_PATH = "/docs"
+    _OAUTH2_REDIRECT_PATH = app.swagger_ui_oauth2_redirect_url or f"{_DOCS_PATH}/oauth2-redirect"
+
+    @app.get(_DOCS_PATH, include_in_schema=False)
+    async def custom_swagger_ui_html():
+        return get_swagger_ui_html(
+            openapi_url=app.openapi_url,
+            title=f"{app.title} - Swagger UI",
+            oauth2_redirect_url=_OAUTH2_REDIRECT_PATH,
+            swagger_js_url="/static/swagger-ui-bundle.js",
+            swagger_css_url="/static/swagger-ui.css",
+        )
+
+    @app.get(_OAUTH2_REDIRECT_PATH, include_in_schema=False)
+    async def swagger_ui_redirect():
+        return get_swagger_ui_oauth2_redirect_html()
+
+    # Optional ReDoc route. Note: redoc.standalone.js is NOT provided by swagger_ui_bundle.
+    # To use local ReDoc, place the file at your own static directory and update the path below.
+    @app.get("/redoc", include_in_schema=False)
+    async def redoc_html_local():
+        # If you add a local redoc.standalone.js under your own static dir, update redoc_js_url accordingly.
+        # Returning a minimal page that informs about missing local asset to avoid CDN fallback.
+        return get_redoc_html(
+            openapi_url=app.openapi_url,
+            title=f"{app.title} - ReDoc",
+            redoc_js_url="/static/redoc.standalone.js",  # Provide this file locally if you need ReDoc
+        )
+except Exception as e:
+    print(f"[Docs Setup] Failed to mount local static assets: {e}")
 
 class Message(BaseModel):
     """Chat message with role and content"""
